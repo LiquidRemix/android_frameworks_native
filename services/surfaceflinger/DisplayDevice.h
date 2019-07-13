@@ -123,7 +123,6 @@ public:
     void                    setLayerStack(uint32_t stack);
     void                    setDisplaySize(const int newWidth, const int newHeight);
     void                    setProjection(int orientation, const Rect& viewport, const Rect& frame);
-    void                    setTranslate(int x, int y);
 
     int                     getOrientation() const { return mOrientation; }
     uint32_t                getOrientationTransform() const;
@@ -295,11 +294,6 @@ private:
     HdrCapabilities mHdrCapabilities;
     const int32_t mSupportedPerFrameMetadata;
 
-    // Screen stabilization
-    int translateX;
-    int translateY;
-    Transform R, TL, TP, S;
-
     // Mappings from desired Dataspace/RenderIntent to the supported
     // Dataspace/ColorMode/RenderIntent.
     using ColorModeKey = uint64_t;
@@ -350,17 +344,19 @@ public:
           : DisplayRenderArea(device, device->getBounds(), device->getWidth(), device->getHeight(),
                               rotation) {}
     DisplayRenderArea(const sp<const DisplayDevice> device, Rect sourceCrop, uint32_t reqWidth,
-                      uint32_t reqHeight, Transform::orientation_flags rotation)
+                      uint32_t reqHeight, Transform::orientation_flags rotation,
+                      bool allowSecureLayers = true)
           : RenderArea(reqWidth, reqHeight, CaptureFill::OPAQUE,
                        getDisplayRotation(rotation, device->getInstallOrientation())),
             mDevice(device),
-            mSourceCrop(sourceCrop) {}
+            mSourceCrop(sourceCrop),
+            mAllowSecureLayers(allowSecureLayers) {}
 
     const Transform& getTransform() const override { return mDevice->getTransform(); }
     Rect getBounds() const override { return mDevice->getBounds(); }
     int getHeight() const override { return mDevice->getHeight(); }
     int getWidth() const override { return mDevice->getWidth(); }
-    bool isSecure() const override { return mDevice->isSecure(); }
+    bool isSecure() const override { return mAllowSecureLayers && mDevice->isSecure(); }
 
     bool needsFiltering() const override {
         // check if the projection from the logical display to the physical
@@ -450,6 +446,7 @@ private:
 
     const sp<const DisplayDevice> mDevice;
     const Rect mSourceCrop;
+    const bool mAllowSecureLayers;
 };
 
 }; // namespace android

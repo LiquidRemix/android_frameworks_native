@@ -254,8 +254,7 @@ DisplayDevice::DisplayDevice(
       mHasHdr10(false),
       mHasHLG(false),
       mHasDolbyVision(false),
-      mSupportedPerFrameMetadata(supportedPerFrameMetadata),
-      translateX(0), translateY(0)
+      mSupportedPerFrameMetadata(supportedPerFrameMetadata)
 {
     // clang-format on
     populateColorModes(hwcColorModes);
@@ -568,7 +567,7 @@ void DisplayDevice::setProjection(int orientation,
     const int w = mDisplayWidth;
     const int h = mDisplayHeight;
 
-    R.reset();
+    Transform R;
     DisplayDevice::orientationToTransfrom(orientation, w, h, &R);
 
     if (!frame.isValid()) {
@@ -592,9 +591,7 @@ void DisplayDevice::setProjection(int orientation,
 
     dirtyRegion.set(getBounds());
 
-    TL.reset();
-    TP.reset();
-    S.reset();
+    Transform TL, TP, S;
     float src_width  = viewport.width();
     float src_height = viewport.height();
     float dst_width  = frame.width();
@@ -612,9 +609,6 @@ void DisplayDevice::setProjection(int orientation,
     TL.set(-src_x, -src_y);
     TP.set(dst_x, dst_y);
 
-    Transform translate;
-    translate.set(translateX, translateY);
-
     // need to take care of primary display rotation for mGlobalTransform
     // for case if the panel is not installed aligned with device orientation
     if (mType == DisplayType::DISPLAY_PRIMARY) {
@@ -626,7 +620,7 @@ void DisplayDevice::setProjection(int orientation,
     // The viewport and frame are both in the logical orientation.
     // Apply the logical translation, scale to physical size, apply the
     // physical translation and finally rotate to the physical orientation.
-    mGlobalTransform = translate * R * TP * S * TL;
+    mGlobalTransform = R * TP * S * TL;
 
     const uint8_t type = mGlobalTransform.getType();
     mNeedsFiltering = (!mGlobalTransform.preserveRects() ||
@@ -662,16 +656,6 @@ void DisplayDevice::setProjection(int orientation,
 
 uint32_t DisplayDevice::getPrimaryDisplayOrientationTransform() {
     return sPrimaryDisplayOrientation;
-}
-
-void DisplayDevice::setTranslate(int x, int y) {
-    translateX = x;
-    translateY = y;
-
-    Transform translate;
-    translate.set(translateX, translateY);
-
-    mGlobalTransform = translate * R * TP * S * TL;
 }
 
 void DisplayDevice::dump(String8& result) const {
